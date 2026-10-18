@@ -18,8 +18,9 @@ sans cloud, sans compte, directement sur votre réseau.
 L'intégration lit l'identification du régulateur et choisit ses registres :
 
 - **WPM** : WPM 3, WPM 3i, WPMsystem (pompes WPL, WPF, WPE…) ;
-- **LWZ / LWA** : centrales double flux LWZ 304/404/504, LWZ x04 SOL,
-  LWZ R290.
+- **LWZ / LWA** : centrales double flux LWZ 304/404/504, LWZ x04 SOL ;
+- **LWZ R290** (THZ avec ISG Connect) : il sert les registres des WPM et
+  il est lu comme un WPM (modes, consignes et adresses WPM).
 
 Un autre régulateur est nommé dans l'écran de configuration (« Régulateur
 inconnu ») et relu toutes les 30 minutes.
@@ -112,6 +113,11 @@ ne sont jamais modifiés.
   sont autorisées. Attention : le chat IA de Gladys (MCP) peut créer et
   lancer une telle scène.
 
+Quand la pompe à chaleur est en mode secours, manuel ou dans un mode
+inconnu, la **liste garde sa dernière valeur** (ces modes n'y figurent
+pas) : regardez « Mode de fonctionnement (lu) », qui affiche toujours le
+mode réel.
+
 ### Comment une commande part
 
 Avant chaque commande, l'intégration **relit les réglages** de la pompe à
@@ -121,10 +127,13 @@ revérifiée juste avant l'envoi. Une valeur déjà en place n'est pas
 renvoyée. Une commande qui ne peut pas partir dans les 3,5 secondes est
 refusée sans être envoyée ; Gladys reçoit la réponse dans ses 5 secondes.
 L'ISG confirme une écriture en la renvoyant à l'identique ; sans cette
-confirmation (silence, connexion coupée, réponse différente), Gladys
-affiche « Commande envoyée, sans confirmation » : vérifiez la valeur,
-relue 5 puis 20 secondes plus tard (l'ISG met quelques secondes à
-l'afficher). Une commande à la fois.
+confirmation (silence, connexion coupée, réponse différente, erreur Modbus
+qui ne dit pas que l'écriture a été rejetée), Gladys affiche « Commande
+envoyée, sans confirmation » : vérifiez la valeur, relue 5 puis 20
+secondes plus tard (l'ISG met quelques secondes à l'afficher). Seule une
+erreur Modbus nette (fonction, adresse ou valeur refusée, ISG occupée)
+donne « L'ISG a refusé la commande ». Une commande à la fois, et
+3 secondes au moins entre deux écritures (sinon « encore en cours »).
 
 ## Erreurs et limites
 

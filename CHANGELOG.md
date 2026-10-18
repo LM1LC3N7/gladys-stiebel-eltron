@@ -14,7 +14,10 @@ the notes of the version's GitHub Release.
 
 - STIEBEL ELTRON heat pumps read through the Modbus TCP interface of the ISG
   (no cloud, no account), by its IP address: WPM 3, WPM 3i, WPMsystem and
-  LWZ/LWA controllers, recognised by their identification.
+  LWZ/LWA controllers, recognised by their identification; the LWZ R290
+  is read with the WPM registers it serves.
+- A block whose start the ISG refuses is read once more from a start it
+  answered in the same poll (as pystiebeleltron's read retry).
 - One device with the outside, flow, return, hot water and room
   temperatures, room humidity, the heating and hot water setpoints (comfort
   and eco), the hot water target in effect, the operating mode, compressor,
@@ -29,8 +32,10 @@ the notes of the version's GitHub Release.
   above 60 °C; checked on arrival and again right before the write.
 - Each command reads the parameters again and writes in the same turn of
   the Modbus connection (no other request in between); one that cannot
-  leave within 3.5 s is refused unsent; a write the ISG does not echo is
-  "sent, without confirmation", read again 5 and 20 s later.
+  leave within 3.5 s is refused unsent; a write the ISG does not echo (or
+  answers with a Modbus error that does not say it was rejected) is "sent,
+  without confirmation", read again 5 and 20 s later; at least 3 s between
+  two writes.
 - Own Modbus TCP client: one request at a time, every answer matched to its
   request (transaction, unit, function, size, exact echo), 260 bytes at
   most, the connection dropped on a timeout or a stray answer.

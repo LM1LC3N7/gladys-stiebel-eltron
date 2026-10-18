@@ -106,6 +106,8 @@ export const TIMINGS = {
   commandReadMax: 2_000,
   commandMinRead: 300,
   commandMinSend: 300,
+  /** After a write that may have left, the next command waits this long ("still running"). */
+  commandSpacing: 3 * SECOND,
   /** Polls after a command, spaced: its effect (the ISG takes a few seconds), then a check. */
   followUps: [5 * SECOND, 20 * SECOND],
   /** A sent command keeps its guard until a read shows what it asked, or 90 s. */

@@ -143,8 +143,8 @@ export const T = {
     ),
   unsupported: (code, wait) =>
     both(
-      `Unknown controller (identification ${code}): only the WPM 3, WPM 3i, WPMsystem and LWZ/LWA controllers are supported (next try in ${wait.en}).`,
-      `Régulateur inconnu (identification ${code}) : seuls les régulateurs WPM 3, WPM 3i, WPMsystem et LWZ/LWA sont pris en charge (nouvel essai dans ${wait.fr}).`,
+      `Unknown controller (identification ${code}): only the WPM 3, WPM 3i, WPMsystem, LWZ R290 and LWZ/LWA controllers are supported (next try in ${wait.en}).`,
+      `Régulateur inconnu (identification ${code}) : seuls les régulateurs WPM 3, WPM 3i, WPMsystem, LWZ R290 et LWZ/LWA sont pris en charge (nouvel essai dans ${wait.fr}).`,
     ),
   notes: {
     failing: (names) =>

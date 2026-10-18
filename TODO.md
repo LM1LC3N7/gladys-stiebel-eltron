@@ -45,8 +45,8 @@ up to date at the end of every milestone.
 - **Energy totals**: does the total (kWh below 1000 + MWh) include the
   current day or move at midnight only? Does it ever go back or jump? Only
   then an index (milestone 3).
-- The LWZ R290 (551) read with the LWZ map, as Home Assistant and
-  pystiebeleltron's query script do: confirm on a real one.
+- The LWZ R290 (551) read with the WPM map (pystiebeleltron dc160a5 and
+  d5386c1, after v0.9.2): confirm on a real one, its modes included.
 - The WPMsystem compressor (2541–2546) and booster (2524–2526) registers:
   0/1 as the manual says?
 - Room temperatures: which of FE7 (500), FEK (502) and the WPMsystem room
@@ -158,6 +158,32 @@ up to date at the end of every milestone.
   new address or interval restarts the polling.
 - **Trusted network**: Modbus has no authentication: said in the manifest,
   the docs (fr/en) and the README.
+- **Review round 1 (2026-10-18)**:
+  - B1: the LWZ R290 (551) serves the WPM registers (reference commits
+    dc160a5 "compliant to the WPM registers" and d5386c1, where the query
+    script reads it with the generic WPM API): family `wpm`, the
+    WPMsystem blocks (generic WPM map), WPM modes and write addresses
+    (1500/1501/1509), never the LWZ ones. Docs, README, notices updated;
+    test.
+  - I1: pystiebeleltron's ReadStartRetry ported (`readWithRetry` in
+    `src/isg.js`, issue #722): on an "illegal data address", a block is
+    read once more from the highest start answered directly in the same
+    poll and space, below it, within 125 registers, keeping only its words;
+    a recovered start is never an anchor; a failed retry is handled as
+    before (core → poll fails; secondary never answered → absent). Tests:
+    a WPM 3 refusing the starts 509 and 2503.
+  - I2: on a write, only Modbus exceptions 1, 2, 3, 6 and 10 are a refusal
+    ("refused by the ISG"); 4, 5, 11 and unknown codes may have been
+    applied: "sent, without confirmation", guard and follow-up reads.
+    Test: exception 11 then a late apply.
+  - m1: a controller id of 0x8000 is a passing failure (normal backoff,
+    "controller unavailable"), not an unknown controller for 30 min.
+  - m2: the controller is set only after its blocks were read; a device
+    without any feature is never published to Discovery.
+  - m3: documented (fr/en): in emergency, manual or an unknown mode the
+    select keeps its last value; "Operating mode (read)" shows the real one.
+  - m4: after a write that may have left, a new command is refused "still
+    running" for 3 s (`commandSpacing`): never two settings back to back.
 - **gladys_version >= 5.1.0** (as the sibling local modules); **categories
   `climate`, `energy`**, transport `local`.
 - **Template demo files** (devices, scenes, widgets, weather and their

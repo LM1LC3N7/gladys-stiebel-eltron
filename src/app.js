@@ -44,6 +44,7 @@ import {
   decode,
   freshBlocks,
   readBlocks,
+  UNAVAILABLE,
   readController,
   setpointWord,
 } from './isg.js';
@@ -58,6 +59,13 @@ const PARAMETER_VALUES = [
   'dhwSetpoint',
   'dhwSetpointEco',
 ];
+
+/**
+ * Modbus exception codes that say a write was not applied: 1 illegal
+ * function, 2 illegal data address, 3 illegal data value, 6 busy, 10
+ * gateway path unavailable. Any other code is ambiguous.
+ */
+const REFUSALS = new Set([1, 2, 3, 6, 10]);
 
 /** What a command compares, for a role: the mode key or the setpoint register word. */
 function comparable(role, values) {
@@ -106,6 +114,8 @@ export class StiebelApp {
     this.lastTestAt = -Infinity;
     /** The command in flight (one at a time for the ISG). */
     this.inFlight = undefined;
+    /** No new command before this time: a write left just before. */
+    this.quietUntil = -Infinity;
     /** `${family}:${role}` -> { from, expected, moved, until }: a command sent, not seen yet. */
     this.guards = new Map();
   }
@@ -284,6 +294,13 @@ export class StiebelApp {
       if (generation !== this.generation) {
         return;
       }
+      if (code === UNAVAILABLE) {
+        // The ISG answers but has not identified its controller yet (it
+        // is starting, or lost its bus): a passing failure, normal backoff.
+        throw Object.assign(new Error('controller unavailable'), {
+          reason: 'controller unavailable',
+        });
+      }
       const known = Object.hasOwn(CONTROLLERS, code) ? CONTROLLERS[code] : undefined;
       if (!known) {
         isg.unsupported = code;
@@ -291,19 +308,23 @@ export class StiebelApp {
         isg.values = undefined;
         throw Object.assign(new Error('unsupported'), { unsupported: true });
       }
-      if (isg.controller && isg.controller.variant !== known.variant) {
+      if (isg.blocksVariant !== undefined && isg.blocksVariant !== known.variant) {
         // Another controller answers at this address: what was read of the first one is dropped.
         this.logger.warn('ISG: another controller answers at this address');
         isg.blocks = freshBlocks();
         isg.values = undefined;
+        isg.controller = undefined;
       }
-      isg.controller = { code, ...known };
+      isg.blocksVariant = known.variant;
       const { raw, failed } = await readBlocks(isg.client, known.variant, isg.blocks, {
         logger: this.logger,
       });
       if (generation !== this.generation) {
         return;
       }
+      // Identified only once its registers were read: never a device
+      // published for a controller whose read failed.
+      isg.controller = { code, ...known };
       isg.values = decode(known.family, raw);
       isg.failed = failed;
       isg.online = true;
@@ -335,7 +356,7 @@ export class StiebelApp {
       this.logger.warn(`ISG: unknown controller identification ${isg.unsupported}`);
       return;
     }
-    const reason = errorReason(err);
+    const reason = err.reason ?? errorReason(err);
     // Never read again sooner than the interval.
     const wait = Math.max(
       this.interval,
@@ -432,14 +453,20 @@ export class StiebelApp {
     if (families.length === 0) {
       return;
     }
-    const devices = families.map((family) =>
-      buildDevice(this.gladys, family, {
-        roles: this.rolesFor(family),
-        controller: family === this.family ? this.isg.controller : undefined,
-        language: this.config.language,
-        created: this.createdDevice(deviceIds(this.gladys, family).device),
-      }),
-    );
+    const devices = families
+      .map((family) =>
+        buildDevice(this.gladys, family, {
+          roles: this.rolesFor(family),
+          controller: family === this.family ? this.isg.controller : undefined,
+          language: this.config.language,
+          created: this.createdDevice(deviceIds(this.gladys, family).device),
+        }),
+      )
+      // Never a device without a feature (a controller that gave no value).
+      .filter((d) => d.features.length > 0);
+    if (devices.length === 0) {
+      return;
+    }
     const json = JSON.stringify(devices);
     if (json === this.published) {
       return;
@@ -638,7 +665,7 @@ export class StiebelApp {
     if (!this.config.allowCommands) {
       throw this.refusal(ERRORS.disabled);
     }
-    if (this.inFlight) {
+    if (this.inFlight || received < this.quietUntil) {
       throw this.refusal(ERRORS.stillRunning);
     }
     const promise = this.command(target, wanted, received);
@@ -766,12 +793,15 @@ export class StiebelApp {
         // Nothing reached the socket.
         throw this.refusal(err.kind === ERROR_KINDS.LATE ? ERRORS.tooSlow : ERRORS.notSent(reason));
       }
-      if (err.kind === ERROR_KINDS.EXCEPTION) {
+      if (err.kind === ERROR_KINDS.EXCEPTION && REFUSALS.has(err.code)) {
+        // Illegal function, address or value, busy, no gateway path: not applied.
         this.followUp();
         throw this.refusal(ERRORS.refused(reason));
       }
-      // A silence, a dropped connection or an answer that is not the echo:
-      // the write may have reached the ISG.
+      // A silence, a dropped connection, an answer that is not the echo, or
+      // an exception that does not say the write was not applied (4 device
+      // failure, 5 acknowledge, 11 no answer behind a gateway, unknown
+      // codes): the write may have reached the heat pump.
       this.guard(key, plan);
       this.followUp();
       throw this.refusal(ERRORS.sentUnconfirmed(reason));
@@ -785,6 +815,9 @@ export class StiebelApp {
   followUp() {
     const isg = this.isg;
     const generation = this.generation;
+    // A write may have left: the next command waits a little, so that two
+    // settings are never written back to back.
+    this.quietUntil = this.now() + TIMINGS.commandSpacing;
     for (const delay of TIMINGS.followUps) {
       const handle = this.timers.setTimeout(() => {
         isg.followUps.delete(handle);

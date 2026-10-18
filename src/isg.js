@@ -8,7 +8,8 @@
 // Two families of controllers, told apart by the controller identification
 // (input register 5001, manual 5002):
 //   - WPM: WPM 3 (390), WPM 3i (391), WPMsystem (449);
-//   - LWZ / LWA integral units: 103, 104 and the LWZ R290 (551).
+//   - LWZ / LWA integral units: 103, 104 (the LWZ R290, 551, serves the
+//     WPM map and is read as a WPM).
 // Each reads only the registers this integration shows, in blocks that stay
 // inside the ranges pystiebeleltron lists for every variant (a WPM 3 does not
 // serve 508, a WPM 3i not 527-531...): a read across a hole would be refused
@@ -19,6 +20,7 @@
 // below rejects. A value outside its range is unknown, never published.
 // -----------------------------------------------------------------------------
 
+import { LIMITS } from './constants.js';
 import { ERROR_KINDS, ILLEGAL_DATA_ADDRESS, ModbusError } from './modbus/client.js';
 
 export const UNAVAILABLE = 0x8000;
@@ -26,11 +28,16 @@ export const UNAVAILABLE = 0x8000;
 /** Input register of the controller identification (manual 5002). */
 export const CONTROLLER_REGISTER = 5001;
 
-/** The controllers known, by identification (pystiebeleltron ControllerModel). */
+/**
+ * The controllers known, by identification (pystiebeleltron ControllerModel).
+ * The LWZ R290 (551, THZ with ISG Connect) serves the WPM map, not the LWZ
+ * one: pystiebeleltron dc160a5 ("compliant to the WPM registers") and
+ * d5386c1 (its query script reads it with the generic WPM API).
+ */
 export const CONTROLLERS = {
   103: { family: 'lwz', variant: 'lwz', model: 'LWZ / LWA' },
   104: { family: 'lwz', variant: 'lwz', model: 'LWZ x04 SOL' },
-  551: { family: 'lwz', variant: 'lwz', model: 'LWZ R290' },
+  551: { family: 'wpm', variant: 'wpmsystem', model: 'LWZ R290' },
   390: { family: 'wpm', variant: 'wpm3', model: 'WPM 3' },
   391: { family: 'wpm', variant: 'wpm3i', model: 'WPM 3i' },
   449: { family: 'wpm', variant: 'wpmsystem', model: 'WPMsystem' },
@@ -224,8 +231,10 @@ function decodeWpm(input, holding) {
     dhwSetpointEco: setpoint(holding(1510)),
     // WPMsystem: the compressor and booster registers when it serves them;
     // otherwise the bits of the operating status.
-    compressor: compressors.some((w) => w !== undefined) ? anyOn(compressors) : bit(status, 6),
-    booster: boosters.some((w) => w !== undefined) ? anyOn(boosters) : bit(status, 3),
+    compressor: compressors.some((w) => flag(w) !== undefined)
+      ? anyOn(compressors)
+      : bit(status, 6),
+    booster: boosters.some((w) => flag(w) !== undefined) ? anyOn(boosters) : bit(status, 3),
     fault: flag(input(2503)),
     energy: {
       producedHeatingToday: unsigned(input(3500)),
@@ -301,16 +310,19 @@ export async function readController(client, options) {
 export async function readBlocks(client, variant, blocks, { logger, options } = {}) {
   const raw = { input: new Map(), holding: new Map() };
   const failed = [];
+  // The starts answered directly in this poll, per space (the anchors).
+  const anchors = { input: new Set(), holding: new Set() };
+  const read = (space, start, count) =>
+    space === 'input'
+      ? client.readInput(start, count, options)
+      : client.readHolding(start, count, options);
   for (const block of BLOCKS[variant]) {
     if (blocks.absent.has(block.name)) {
       continue;
     }
     let words;
     try {
-      words =
-        block.space === 'input'
-          ? await client.readInput(block.start, block.count, options)
-          : await client.readHolding(block.start, block.count, options);
+      words = await readWithRetry(read, anchors, block);
     } catch (err) {
       if (!(err instanceof ModbusError) || err.kind !== ERROR_KINDS.EXCEPTION || block.core) {
         throw err;
@@ -336,6 +348,38 @@ export async function readBlocks(client, variant, blocks, { logger, options } = 
     words.forEach((word, i) => raw[block.space].set(block.start + i, word));
   }
   return { raw, failed };
+}
+
+/**
+ * pystiebeleltron's ReadStartRetry (`_read_retry.py`, issue #722): some ISGs
+ * refuse a read that starts at an address they do serve (509 on a WPM 3,
+ * 532 on a WPM 3i). On an "illegal data address", the block is read once
+ * more from the highest start already answered in the same poll and space,
+ * below it, when the whole read fits in 125 registers; only the words of
+ * the block are kept. A recovered start never becomes an anchor; a failed
+ * retry throws its own error. Never for writes.
+ */
+async function readWithRetry(read, anchors, { space, start, count }) {
+  let words;
+  try {
+    words = await read(space, start, count);
+  } catch (err) {
+    const illegal =
+      err instanceof ModbusError &&
+      err.kind === ERROR_KINDS.EXCEPTION &&
+      err.code === ILLEGAL_DATA_ADDRESS;
+    const candidates = [...anchors[space]].filter(
+      (anchor) => anchor < start && start + count - anchor <= LIMITS.registersPerRead,
+    );
+    if (!illegal || candidates.length === 0) {
+      throw err;
+    }
+    const anchor = Math.max(...candidates);
+    const wide = await read(space, anchor, start + count - anchor);
+    return wide.slice(start - anchor);
+  }
+  anchors[space].add(start);
+  return words;
 }
 
 export const freshBlocks = () => ({ answered: new Set(), absent: new Set(), failing: new Set() });

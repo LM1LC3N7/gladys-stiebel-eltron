@@ -384,9 +384,12 @@ test('a guard: the ISG still shows the old value after a write, going back to it
       return undefined;
     },
   });
-  const { command } = await setup(t, { isg, config: ALLOWED });
+  const { command, advance } = await setup(t, { isg, config: ALLOWED });
   assert.equal((await command('heating-setpoint', 22, { wait: 0 })).success, true);
   await settle();
+  // Never two writes back to back.
+  assert.match((await command('mode', 'eco', { wait: 0 })).error, /encore en cours/);
+  await advance(3 * SECOND);
   // The fresh read shows 21, the start value, which 21 asks: without the
   // guard this would be "already so" while 22 may still land.
   assert.equal((await command('heating-setpoint', 21, { wait: 0 })).success, true);
@@ -401,6 +404,27 @@ test('a Modbus exception on the write: refused by the ISG', async (t) => {
   const { command } = await setup(t, { isg, config: ALLOWED });
   const ack = await command('mode', 'eco');
   assert.match(ack.error, /L'ISG a refusé la commande \(Modbus exception 3\)/);
+});
+
+test('an ambiguous exception on the write (11): sent, without confirmation, guarded and read again', async (t) => {
+  const isg = fakeIsg({
+    // The gateway answers "no response from the target", the setting lands later.
+    behave: (request, state) => {
+      if (request.fn === 6) {
+        setImmediate(() => state.holding.set(request.address, request.value));
+        return { exception: 11 };
+      }
+      return undefined;
+    },
+  });
+  const { gladys, command, app, advance } = await setup(t, { isg, config: ALLOWED });
+  isg.holding.set(1500, 2);
+  const ack = await command('mode', 'eco', { wait: 0 });
+  assert.match(ack.error, /Commande envoyée, sans confirmation \(Modbus exception 11\)/);
+  assert.ok(app.guardActive('wpm:mode'));
+  await advance(5 * SECOND);
+  assert.equal(last(gladys, 'mode'), 'eco');
+  assert.equal(app.guardActive('wpm:mode'), false, 'lifted by the read showing it');
 });
 
 test('a write whose answer is not its echo: sent, without confirmation', async (t) => {
@@ -561,4 +585,64 @@ test('logs never carry register values nor the answers of the ISG', async (t) =>
   await command('dhw-setpoint', 50);
   await command('dhw-setpoint', 48);
   assert.ok(logs.every((l) => !/12345|3123/.test(l)));
+});
+
+test('an LWZ R290 (551) is read with the WPM map and written at the WPM addresses', async (t) => {
+  const registers = wpmRegisters();
+  registers.input[5001] = 551;
+  const isg = fakeIsg({ registers });
+  const { gladys, command } = await setup(t, { isg, config: ALLOWED });
+  const d = discovered(gladys, 'wpm');
+  assert.equal(d.model, 'STIEBEL ELTRON LWZ R290');
+  assert.equal(discovered(gladys, 'lwz'), undefined);
+  assert.ok(
+    isg.requests.every((r) => r.address >= 500),
+    'never the LWZ addresses',
+  );
+  assert.equal(last(gladys, 'temperature-flow'), 35.2);
+  assert.equal((await command('mode', 'eco')).success, true);
+  assert.deepEqual(isg.writes(), [[1500, 4]]);
+});
+
+test('a start refused by the ISG is read again from a start it answered (ReadStartRetry)', async (t) => {
+  // A WPM 3 that refuses reads starting at 509 and at 2503, though it serves them.
+  const isg = fakeIsg({
+    behave: (request) =>
+      request.fn === 4 && [509, 2503].includes(request.address) ? { exception: 2 } : undefined,
+  });
+  const { gladys } = await setup(t, { isg });
+  assert.equal(gladys.fake.connectionStatus.connected, true);
+  assert.equal(last(gladys, 'temperature-flow'), 35.2);
+  assert.equal(last(gladys, 'temperature-dhw'), 48.2);
+  assert.equal(last(gladys, 'fault'), 0);
+  assert.ok(isg.requests.some((r) => r.address === 500 && r.count === 23));
+  assert.ok(isg.requests.some((r) => r.address === 2500 && r.count === 4));
+});
+
+test('a retry that fails too: the core block fails the poll, a secondary one is dropped', async (t) => {
+  const isg = fakeIsg({
+    behave: (request) =>
+      request.fn === 4 && request.address === 500 && request.count !== 8
+        ? { exception: 2 }
+        : request.fn === 4 && request.address === 509
+          ? { exception: 2 }
+          : undefined,
+  });
+  const { gladys } = await setup(t, { isg, create: false });
+  assert.equal(gladys.fake.connectionStatus.connected, false);
+  assert.match(message(gladys).en, /Modbus exception 2/);
+  assert.equal(gladys.fake.discoveredDevices.length, 0, 'no device for a controller never read');
+});
+
+test('a controller id still unavailable (0x8000) is a passing failure, not an unknown controller', async (t) => {
+  const registers = wpmRegisters();
+  registers.input[5001] = 0x8000;
+  const isg = fakeIsg({ registers });
+  const { gladys, advance } = await setup(t, { isg, create: false });
+  assert.match(message(gladys).en, /controller unavailable; next try in 30 s/);
+  assert.doesNotMatch(message(gladys).en, /Unknown controller/);
+  isg.input.set(5001, 390);
+  await advance(31 * SECOND);
+  assert.equal(gladys.fake.connectionStatus.connected, true);
+  assert.equal(gladys.fake.discoveredDevices.length, 1);
 });

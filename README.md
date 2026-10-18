@@ -23,7 +23,8 @@ Gladys ⇄ SDK ⇄ src/handlers.js ⇄ src/app.js (StiebelApp)
 
 - **Reads**: the controller identification (input 5001) then a few blocks
   of input and holding registers, every 30 s (10 s – 10 min). WPM 3, WPM 3i
-  and WPMsystem share one register map (`wpm`), the LWZ/LWA controllers
+  and WPMsystem share one register map (`wpm`), as does the LWZ R290 (551,
+  pystiebeleltron dc160a5 / d5386c1); the LWZ/LWA controllers (103, 104)
   another (`lwz`); the blocks stay inside the ranges each variant serves. A
   block refused with "illegal data address" before it ever answered is not
   read again; a secondary block failing never blocks the main values.

@@ -19,7 +19,9 @@ The integration reads the controller identification and picks its
 registers:
 
 - **WPM**: WPM 3, WPM 3i, WPMsystem (WPL, WPF, WPE heat pumps…);
-- **LWZ / LWA**: integral units LWZ 304/404/504, LWZ x04 SOL, LWZ R290.
+- **LWZ / LWA**: integral units LWZ 304/404/504, LWZ x04 SOL;
+- **LWZ R290** (THZ with ISG Connect): it serves the WPM registers and is
+  read as a WPM (WPM modes, setpoints and addresses).
 
 Another controller is named in the configuration screen ("Unknown
 controller") and read again every 30 minutes.
@@ -107,6 +109,10 @@ the anti-legionella program of the controller are never changed.
   through an explicit action and when the commands are allowed. Beware:
   the AI chat of Gladys (MCP) can create and run such a scene.
 
+When the heat pump is in emergency, manual or an unknown mode, the **list
+keeps its last value** (those modes are not in it): look at "Operating mode
+(read)", which always shows the real mode.
+
 ### How a command leaves
 
 Before each command, the integration **reads the settings** of the heat
@@ -115,10 +121,13 @@ that read and the write, and the option (and the ceiling) is checked again
 right before sending. A value already in place is not sent again. A command
 that cannot leave within 3.5 seconds is refused unsent; Gladys gets the
 answer within its 5 seconds. The ISG confirms a write by echoing it; without
-that confirmation (silence, a dropped connection, another answer), Gladys
-shows "Command sent, without confirmation": check the value, read again 5
-and 20 seconds later (the ISG takes a few seconds to show it). One command
-at a time.
+that confirmation (silence, a dropped connection, another answer, a Modbus
+error that does not say the write was rejected), Gladys shows "Command
+sent, without confirmation": check the value, read again 5 and 20 seconds
+later (the ISG takes a few seconds to show it). Only a clear Modbus error
+(function, address or value refused, ISG busy) gives "The ISG refused the
+command". One command at a time, and at least 3 seconds between two writes
+(otherwise "still running").
 
 ## Errors and limits
 
