@@ -6,8 +6,8 @@
     "en": "STIEBEL ELTRON heat pumps via the ISG, local Modbus: temperatures, energy, optional commands.",
     "fr": "PAC STIEBEL ELTRON par l'ISG, Modbus local : températures, énergie, commandes en option."
   },
-  "version": "0.1.0",
-  "docker_image": "ghcr.io/lm1lc3n7/gladys-stiebel-eltron:0.1.0",
+  "version": "0.1.1",
+  "docker_image": "ghcr.io/lm1lc3n7/gladys-stiebel-eltron:0.1.1",
   "gladys_version": ">=5.1.0",
   "cover_image": "https://raw.githubusercontent.com/LM1LC3N7/gladys-stiebel-eltron/main/cover.png",
   "categories": ["climate", "energy"],
