@@ -1,61 +1,145 @@
-# Demo Devices Template
+# STIEBEL ELTRON for Gladys
 
-This is the user documentation of the integration. Gladys re-hosts this file
-and shows a permanent **Documentation** link to it in the Configuration screen
-(in the user's language, with English as the fallback) — it is when
-configuring that the user needs it most. Keep the short onboarding hints in
-the `section` blocks of the manifest `config_schema`; put the long
-step-by-step (screenshots, troubleshooting…) here.
+Shows your **STIEBEL ELTRON** heat pump in Gladys through the **ISG**
+(Internet Service Gateway, "ISG web") and its **Modbus TCP** interface: no
+cloud, no account, straight on your network.
+
+> **Never tested with a real ISG.** Not affiliated with STIEBEL ELTRON. It
+> reads the Modbus registers of the ISG as the pystiebeleltron library
+> (used by Home Assistant) does.
+
+> **Security: Modbus has neither password nor encryption.** Any machine on
+> your network can read the ISG and change the settings of the heat pump.
+> Keep the ISG on a **trusted network** (never exposed to the Internet,
+> ideally on a separate network for connected devices).
+
+## Supported controllers
+
+The integration reads the controller identification and picks its
+registers:
+
+- **WPM**: WPM 3, WPM 3i, WPMsystem (WPL, WPF, WPE heat pumps…);
+- **LWZ / LWA**: integral units LWZ 304/404/504, LWZ x04 SOL, LWZ R290.
+
+Another controller is named in the configuration screen ("Unknown
+controller") and read again every 30 minutes.
 
 ## What you get
 
-Six demo devices show up after installation: a weather station (real data
-from Open-Meteo), a switch, a dimmable light, a smart plug with power
-metering, a motion sensor and a camera.
+One device, "STIEBEL ELTRON heat pump". Each feature appears only once the
+ISG gives its value:
 
-## Configuration
+| Feature                         | Content                                                               |
+| ------------------------------- | --------------------------------------------------------------------- |
+| Operating mode                  | List (commands allowed only), see below                               |
+| Operating mode (read)           | Text: the real mode, emergency and manual included                    |
+| Heating setpoint (comfort)      | Thermostat, heating circuit 1, in °C (command)                        |
+| Heating setpoint (eco)          | In °C, read only (WPM: eco; LWZ: night)                               |
+| Hot water setpoint (comfort)    | Water heater, in °C (command, capped)                                 |
+| Hot water setpoint (eco)        | In °C, read only (WPM: eco; LWZ: night)                               |
+| Hot water target now            | In °C, the setpoint the controller applies now                        |
+| Temperatures                    | Outside, flow, return, hot water, room (FE7, FEK, FET or LWZ), in °C  |
+| Room humidity                   | In % (FEK remote control, LWZ)                                        |
+| Compressor running              | 0 or 1                                                                |
+| Electric booster running        | 0 or 1 (electric heater, "NHZ")                                       |
+| Fault                           | 0 or 1                                                                |
+| Electricity used, heat produced | In kWh, today and total, heating and hot water; heat from the booster |
 
-1. Open the **Configuration** tab of the integration.
-2. Set the **latitude** and **longitude** the demo weather station should
-   observe (they default to Paris), and pick your temperature unit.
-   The **refresh interval** sets how often the weather station and the
-   plug's power are read: every 5 minutes by default, every minute at most.
-3. Save: the devices appear in the **Discovery** tab, ready to be added.
+Water temperatures, the outside temperature and the setpoints are
+"probes": they do not count as the room temperature in Gladys. Read every
+30 seconds by default (10 s to 10 min, configurable).
 
-The **Prefer the local connection** toggle drives the demo plug: it reports
-the channel it actually uses as a badge (local or cloud), with an orange dot
-when it runs degraded (local refused, cloud fallback).
+### Energy: plain values, not a billed meter
 
-## Actions
+For heating and hot water, the ISG gives a counter of **the day** and a
+**total**. According to the documentation, the total does not include the
+day and moves around midnight; nothing guarantees it never jumps or goes
+back. Gladys would count every rise of an index as billed consumption: the
+values are therefore published as **plain sensors** (the unit is in their
+name), never as an energy index. They do not show in the energy monitoring
+of Gladys.
 
-- **Test the weather provider** — performs a live request to Open-Meteo and
-  shows the current temperature and humidity under the button.
-- **Identify a device** — pick one of your devices in the list and it will
-  signal itself (the demo light "blinks" in the logs).
+## Installation
 
-## Scenes
+1. Have the **Modbus module** of your ISG enabled (STIEBEL ELTRON support
+   does it, often for free).
+2. Give the ISG a **fixed IP address** in your router.
+3. Install the integration from the Gladys store.
+4. In its configuration, enter the **IP address of the ISG** (port 502 by
+   default; add `:port` when it differs).
+5. Save, then add the heat pump from the **Discovery** tab.
 
-The integration adds its own cards to the scene editor (Gladys 5.1 or
-later), under the **Integrations** category:
+The **Test the connection** button reads the ISG once (at most every 10
+seconds).
 
-- **Motion detected** (trigger) — starts the scene when a demo motion sensor
-  sees something move. Optionally pick the sensor and what moved (person,
-  animal); left empty, any detection matches. The following actions can
-  read what moved with `{{triggerEvent.data.target}}`.
-- **Identify a device** (action) — makes the chosen device signal itself.
-  It returns whether the device could signal itself, so the following
-  actions can depend on it.
+## Commands (off by default)
 
-## Dashboard
+While **Allow the commands** is off, every command is refused. Once on,
+Gladys may change:
 
-Add the **Demo status** widget to a dashboard: it shows the live
-temperature of the weather station and the power of the office plug, the
-connection the plug currently uses (orange when degraded) and the observed
-location. Its **Identify the light** button makes the demo light signal
-itself.
+- the **operating mode**: WPM: program (automatic), comfort, eco, hot water
+  only, standby; LWZ: automatic, day, setback (night), hot water only,
+  standby;
+- the **heating setpoint (comfort)** of heating circuit 1: 5 to 30 °C (WPM)
+  or 10 to 30 °C (LWZ), to a tenth of a degree;
+- the **hot water setpoint (comfort)**: whole degrees, from 10 °C up to
+  the **ceiling**.
 
-## Troubleshooting
+### Hot water ceiling: 55 °C by default
 
-The integration logs everything it does: check the integration logs from the
-Gladys UI (or `docker logs` on the host) with `LOG_LEVEL=debug` for the full
-detail.
+Water at 60 °C scalds in a few seconds. Gladys therefore **never sets the
+hot water above 55 °C** by default. The **Hot water ceiling** setting
+changes it from 40 to 60 °C; going **above 60 °C is never possible**,
+whatever is typed (even though some LWZ accept 65 °C). A setpoint above the
+ceiling is refused unsent, and the ceiling is checked again right before
+sending (a ceiling lowered during a command stops it). The eco setpoint and
+the anti-legionella program of the controller are never changed.
+
+### What Gladys never does
+
+- Select the **emergency mode** (set by the installer when the compressor
+  is out of order) or the **manual mode** of the LWZ (a service mode).
+- **Leave** one of these modes, or an unknown mode: the command is refused,
+  the controller keeps control.
+- Offer a switch: the mode is a **list**, the setpoints are thermostats; a
+  "turn everything off" (Gladys, Google Home, Alexa, HomeKit) does not
+  reach the heat pump. A scene may change the mode or a setpoint, only
+  through an explicit action and when the commands are allowed. Beware:
+  the AI chat of Gladys (MCP) can create and run such a scene.
+
+### How a command leaves
+
+Before each command, the integration **reads the settings** of the heat
+pump again and decides on that read only; no other request runs between
+that read and the write, and the option (and the ceiling) is checked again
+right before sending. A value already in place is not sent again. A command
+that cannot leave within 3.5 seconds is refused unsent; Gladys gets the
+answer within its 5 seconds. The ISG confirms a write by echoing it; without
+that confirmation (silence, a dropped connection, another answer), Gladys
+shows "Command sent, without confirmation": check the value, read again 5
+and 20 seconds later (the ISG takes a few seconds to show it). One command
+at a time.
+
+## Errors and limits
+
+- **ISG unreachable**: "Operating mode (read)" shows "ISG unreachable", the
+  device turns unreachable, the other values keep their last one. Tried
+  again after 30 s, 1, 2, then 5 minutes, never faster than the interval.
+- **Missing registers**: a block the controller does not serve (energy on
+  some models, for example) is not asked again until a restart; a block
+  failing now and then is reported in the configuration screen, the other
+  values are still published.
+- **One ISG** per integration; the device is keyed by the controller
+  family (WPM or LWZ): Modbus gives neither a serial number nor a MAC
+  address.
+- Modbus requests go one at a time; every answer is checked (transaction
+  id, unit, function, size).
+- Not yet: heating circuits 2 to 5, cooling, LWZ ventilation, SG Ready, the
+  individual heat pumps of a WPMsystem.
+- The logs never carry register values.
+
+## Credits
+
+Ported from [pystiebeleltron](https://github.com/ThyMYthOS/python-stiebel-eltron)
+(Martin Fuchs and contributors, MIT, version 0.9.2), the library of Home
+Assistant's STIEBEL ELTRON integration. Apache-2.0 license.

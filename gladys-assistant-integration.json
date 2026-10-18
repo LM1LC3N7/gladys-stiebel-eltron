@@ -1,177 +1,153 @@
 {
   "manifest_version": 1,
   "type": "device",
-  "name": "Demo Devices Template",
+  "name": "STIEBEL ELTRON",
   "description": {
-    "en": "Starter template showing sensors, a switch, a dimmable light and a smart plug.",
-    "fr": "Template de démarrage : capteurs, interrupteur, lampe variable et prise connectée."
+    "en": "STIEBEL ELTRON heat pumps via the ISG, local Modbus: temperatures, energy, optional commands.",
+    "fr": "PAC STIEBEL ELTRON par l'ISG, Modbus local : températures, énergie, commandes en option."
   },
-  "version": "1.0.0",
-  "docker_image": "ghcr.io/gladysassistant/integration-template-js:1.0.0",
+  "version": "0.1.0",
+  "docker_image": "ghcr.io/lm1lc3n7/gladys-stiebel-eltron:0.1.0",
   "gladys_version": ">=5.1.0",
-  "cover_image": "https://raw.githubusercontent.com/GladysAssistant/integration-template-js/master/cover.png",
-  "categories": ["lighting", "security", "environment"],
-  "transports": ["local", "cloud"],
+  "cover_image": "https://raw.githubusercontent.com/LM1LC3N7/gladys-stiebel-eltron/main/cover.png",
+  "categories": ["climate", "energy"],
+  "transports": ["local"],
   "config_schema": [
     {
       "key": "intro",
       "type": "section",
-      "label": { "en": "Getting started", "fr": "Pour commencer" },
+      "label": {
+        "en": "Your ISG",
+        "fr": "Votre ISG"
+      },
       "description": {
-        "en": "The demo weather station reads real data from the free Open-Meteo API: pick the coordinates to observe. No account, no API key.",
-        "fr": "La station météo de démonstration lit de vraies données via l'API gratuite Open-Meteo : choisissez les coordonnées à observer. Pas de compte, pas de clé d'API."
+        "en": "Shows your STIEBEL ELTRON heat pump (WPM 3, WPM 3i, WPMsystem or LWZ/LWA controller) in Gladys through the Modbus TCP interface of its ISG (Internet Service Gateway), without any cloud: temperatures, setpoints, operating mode, compressor and booster, energy. The Modbus module of the ISG must be enabled (ask STIEBEL ELTRON support). Enter the IP address of the ISG (give it a fixed address in your router), save, then add the heat pump from the Discovery tab. Modbus has no password: keep the ISG on a trusted network. Never tested with a real ISG. Not affiliated with STIEBEL ELTRON.",
+        "fr": "Affiche votre pompe à chaleur STIEBEL ELTRON (régulateur WPM 3, WPM 3i, WPMsystem ou LWZ/LWA) dans Gladys par l'interface Modbus TCP de son ISG (Internet Service Gateway), sans cloud : températures, consignes, mode de fonctionnement, compresseur et appoint, énergie. Le module Modbus de l'ISG doit être activé (demandez au support STIEBEL ELTRON). Saisissez l'adresse IP de l'ISG (donnez-lui une adresse fixe dans votre routeur), enregistrez, puis ajoutez la pompe à chaleur depuis l'onglet Découverte. Modbus n'a pas de mot de passe : gardez l'ISG sur un réseau de confiance. Jamais testé avec une vraie ISG. Sans lien avec STIEBEL ELTRON."
       },
       "links": [
         {
-          "url": "https://open-meteo.com/en/docs",
-          "label": { "en": "Open-Meteo documentation", "fr": "Documentation Open-Meteo" }
+          "url": "https://github.com/LM1LC3N7/gladys-stiebel-eltron/blob/main/docs/fr.md",
+          "label": {
+            "en": "Guide (French)",
+            "fr": "Guide (français)"
+          }
+        },
+        {
+          "url": "https://github.com/LM1LC3N7/gladys-stiebel-eltron/blob/main/docs/en.md",
+          "label": {
+            "en": "Guide (English)",
+            "fr": "Guide (anglais)"
+          }
         }
       ]
     },
     {
-      "key": "latitude",
-      "type": "number",
-      "label": { "en": "Latitude", "fr": "Latitude" },
-      "description": {
-        "en": "Latitude used for the demo weather sensor.",
-        "fr": "Latitude utilisée par le capteur météo de démonstration."
+      "key": "address",
+      "type": "string",
+      "label": {
+        "en": "IP address of the ISG",
+        "fr": "Adresse IP de l'ISG"
       },
-      "placeholder": { "en": "e.g. 48.8566", "fr": "ex. 48.8566" },
+      "description": {
+        "en": "An IPv4 address or a host name (Modbus port 502 unless you add one, for example 192.168.1.70:5020).",
+        "fr": "Une adresse IPv4 ou un nom d'hôte (port Modbus 502 sauf si vous en ajoutez un, par exemple 192.168.1.70:5020)."
+      },
+      "placeholder": {
+        "en": "192.168.1.70",
+        "fr": "192.168.1.70"
+      },
       "required": true,
-      "default": 48.8566,
-      "min": -90,
-      "max": 90
+      "default": ""
     },
     {
-      "key": "longitude",
-      "type": "number",
-      "label": { "en": "Longitude", "fr": "Longitude" },
-      "description": {
-        "en": "Longitude used for the demo weather sensor.",
-        "fr": "Longitude utilisée par le capteur météo de démonstration."
+      "key": "allow_commands",
+      "type": "boolean",
+      "label": {
+        "en": "Allow the commands",
+        "fr": "Autoriser les commandes"
       },
-      "placeholder": { "en": "e.g. 2.3522", "fr": "ex. 2.3522" },
-      "required": true,
-      "default": 2.3522,
-      "min": -180,
-      "max": 180
+      "description": {
+        "en": "Off by default. On: Gladys may change the operating mode, the heating setpoint (comfort, heating circuit 1) and the hot water setpoint (comfort), up to the ceiling below. Off: every command is refused.",
+        "fr": "Désactivé par défaut. Activé : Gladys peut changer le mode de fonctionnement, la consigne de chauffage (confort, circuit 1) et la consigne d'eau chaude (confort), jusqu'au plafond ci-dessous. Désactivé : toute commande est refusée."
+      },
+      "required": false,
+      "default": false
     },
     {
-      "key": "unit",
+      "key": "dhw_max_temperature",
+      "type": "number",
+      "label": {
+        "en": "Hot water ceiling (°C)",
+        "fr": "Plafond de l'eau chaude (°C)"
+      },
+      "description": {
+        "en": "Scalding risk: Gladys never sets the hot water above this temperature. 55 °C by default, from 40 to 60 °C (never more than 60 °C, whatever is typed).",
+        "fr": "Risque de brûlure : Gladys ne règle jamais l'eau chaude au-dessus de cette température. 55 °C par défaut, de 40 à 60 °C (jamais plus de 60 °C, quoi qu'on saisisse)."
+      },
+      "required": false,
+      "default": 55,
+      "min": 40,
+      "max": 60
+    },
+    {
+      "key": "poll_interval",
+      "type": "number",
+      "label": {
+        "en": "Refresh interval (s)",
+        "fr": "Intervalle de rafraîchissement (s)"
+      },
+      "description": {
+        "en": "How often the ISG is read, in seconds.",
+        "fr": "Fréquence de lecture de l'ISG, en secondes."
+      },
+      "required": false,
+      "default": 30,
+      "min": 10,
+      "max": 600
+    },
+    {
+      "key": "language",
       "type": "select",
-      "label": { "en": "Temperature unit", "fr": "Unité de température" },
-      "required": false,
-      "default": "celsius",
-      "options": [
-        { "value": "celsius", "label": { "en": "Celsius", "fr": "Celsius" } },
-        { "value": "fahrenheit", "label": { "en": "Fahrenheit", "fr": "Fahrenheit" } }
-      ]
-    },
-    {
-      "key": "poll_frequency",
-      "type": "number",
-      "label": { "en": "Refresh interval (s)", "fr": "Intervalle de rafraîchissement (s)" },
+      "label": {
+        "en": "Language of the feature names",
+        "fr": "Langue des noms des fonctionnalités"
+      },
       "description": {
-        "en": "How often sensors are polled, in seconds (one minute minimum).",
-        "fr": "Fréquence d'interrogation des capteurs, en secondes (une minute minimum)."
+        "en": "Used for the names of the device and features added from now on, for the mode texts and for the command errors.",
+        "fr": "Sert aux noms de l'appareil et des fonctionnalités ajoutés désormais, aux textes des modes et aux erreurs des commandes."
       },
       "required": false,
-      "default": 300,
-      "min": 60,
-      "max": 3600
+      "default": "fr",
+      "options": [
+        {
+          "value": "fr",
+          "label": {
+            "en": "French",
+            "fr": "Français"
+          }
+        },
+        {
+          "value": "en",
+          "label": {
+            "en": "English",
+            "fr": "Anglais"
+          }
+        }
+      ]
     }
   ],
   "actions": [
     {
-      "key": "test_weather",
-      "label": { "en": "Test the weather provider", "fr": "Tester le fournisseur météo" },
+      "key": "test_connection",
+      "label": {
+        "en": "Test the connection",
+        "fr": "Tester la connexion"
+      },
+      "description": {
+        "en": "Reads the ISG once and shows its state.",
+        "fr": "Lit l'ISG une fois et affiche son état."
+      },
       "timeout_seconds": 30
-    },
-    {
-      "key": "identify",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "fields": [
-        {
-          "key": "device",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
-          "required": true
-        }
-      ]
-    }
-  ],
-  "scene_triggers": [
-    {
-      "key": "motion_detected",
-      "label": { "en": "Motion detected", "fr": "Mouvement détecté" },
-      "description": {
-        "en": "A demo motion sensor saw a person or an animal move.",
-        "fr": "Un détecteur de démonstration a vu bouger une personne ou un animal."
-      },
-      "fields": [
-        {
-          "key": "device",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Sensor", "fr": "Détecteur" }
-        },
-        {
-          "key": "target",
-          "type": "multi_select",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" },
-          "options": [
-            { "value": "person", "label": { "en": "Person", "fr": "Personne" } },
-            { "value": "animal", "label": { "en": "Animal", "fr": "Animal" } }
-          ]
-        }
-      ],
-      "variables": [
-        {
-          "key": "target",
-          "type": "string",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" }
-        }
-      ]
-    }
-  ],
-  "scene_actions": [
-    {
-      "key": "identify_device",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "description": {
-        "en": "Make a device signal itself (the demo light blinks).",
-        "fr": "Fait se signaler un appareil (la lampe de démonstration clignote)."
-      },
-      "timeout_seconds": 15,
-      "fields": [
-        {
-          "key": "device",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
-          "required": true
-        }
-      ],
-      "outputs": [
-        {
-          "key": "signalled",
-          "type": "boolean",
-          "label": { "en": "Device signalled", "fr": "Appareil signalé" }
-        }
-      ]
-    }
-  ],
-  "widgets": [
-    {
-      "key": "demo_status",
-      "label": { "en": "Demo status", "fr": "État de la démo" },
-      "description": {
-        "en": "Live temperature and plug power, plug connection and observed location.",
-        "fr": "Température et puissance en direct, connexion de la prise, position observée."
-      },
-      "icon": "activity",
-      "action_timeout_seconds": 15
     }
   ]
 }
