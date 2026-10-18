@@ -604,6 +604,18 @@ test('an LWZ R290 (551) is read with the WPM map and written at the WPM addresse
   assert.deepEqual(isg.writes(), [[1500, 4]]);
 });
 
+test('a WPMsystem with one heat pump: the compressor goes 1 then 0, never stuck', async (t) => {
+  const registers = wpmRegisters();
+  Object.assign(registers.input, { 5001: 449, 2500: 1 << 6, 2541: 1 });
+  const isg = fakeIsg({ registers });
+  const { gladys, advance } = await setup(t, { isg });
+  assert.equal(last(gladys, 'compressor'), 1);
+  isg.input.set(2541, 0);
+  isg.input.set(2500, 0);
+  await advance(30 * SECOND);
+  assert.equal(last(gladys, 'compressor'), 0);
+});
+
 test('a start refused by the ISG is read again from a start it answered (ReadStartRetry)', async (t) => {
   // A WPM 3 that refuses reads starting at 509 and at 2503, though it serves them.
   const isg = fakeIsg({

@@ -231,10 +231,11 @@ function decodeWpm(input, holding) {
     dhwSetpointEco: setpoint(holding(1510)),
     // WPMsystem: the compressor and booster registers when it serves them;
     // otherwise the bits of the operating status.
-    compressor: compressors.some((w) => flag(w) !== undefined)
-      ? anyOn(compressors)
-      : bit(status, 6),
-    booster: boosters.some((w) => flag(w) !== undefined) ? anyOn(boosters) : bit(status, 3),
+    // 1 when one register says so, 0 when all six (three) say 0; otherwise
+    // (fewer heat pumps, registers unavailable or not read) the status bit,
+    // never a stale value.
+    compressor: anyOn(compressors) ?? bit(status, 6),
+    booster: anyOn(boosters) ?? bit(status, 3),
     fault: flag(input(2503)),
     energy: {
       producedHeatingToday: unsigned(input(3500)),

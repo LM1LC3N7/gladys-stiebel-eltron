@@ -82,7 +82,27 @@ test('a WPMsystem: compressors and booster stages from their own registers', () 
   assert.equal(values.compressor, 1);
   assert.equal(values.booster, 0);
   registers.input[2542] = 0x8000;
-  assert.equal(decode('wpm', rawOf(registers)).compressor, undefined, 'one unknown, none on');
+  assert.equal(decode('wpm', rawOf(registers)).compressor, 0, 'none on, one unknown: status bit');
+});
+
+test('a WPMsystem with one heat pump: compressor 1 then 0 with 2542-2546 = 0x8000', () => {
+  const registers = wpmRegisters();
+  Object.assign(registers.input, { 5001: 449, 2500: 1 << 6, 2541: 1 });
+  for (const address of [2542, 2543, 2544, 2545, 2546]) {
+    registers.input[address] = 0x8000;
+  }
+  assert.equal(decode('wpm', rawOf(registers)).compressor, 1);
+  Object.assign(registers.input, { 2500: 0, 2541: 0 });
+  assert.equal(decode('wpm', rawOf(registers)).compressor, 0, 'never stuck at 1');
+  // Every register unavailable: the operating status bit alone.
+  registers.input[2541] = 0x8000;
+  registers.input[2500] = 1 << 6;
+  assert.equal(decode('wpm', rawOf(registers)).compressor, 1);
+  // Booster: stage 1 known, the others unavailable.
+  Object.assign(registers.input, { 2500: 0, 2524: 1, 2525: 0x8000, 2526: 0x8000 });
+  assert.equal(decode('wpm', rawOf(registers)).booster, 1);
+  registers.input[2524] = 0;
+  assert.equal(decode('wpm', rawOf(registers)).booster, 0);
 });
 
 test('an LWZ decoded', () => {

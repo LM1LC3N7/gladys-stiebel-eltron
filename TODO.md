@@ -45,8 +45,8 @@ up to date at the end of every milestone.
 - **Energy totals**: does the total (kWh below 1000 + MWh) include the
   current day or move at midnight only? Does it ever go back or jump? Only
   then an index (milestone 3).
-- The LWZ R290 (551) read with the WPM map (pystiebeleltron dc160a5 and
-  d5386c1, after v0.9.2): confirm on a real one, its modes included.
+- The LWZ R290 (551) read with the WPM map (pystiebeleltron dc160a5 (in
+  v0.9.2) and d5386c1 (after v0.9.2)): confirm on a real one, its modes included.
 - The WPMsystem compressor (2541–2546) and booster (2524–2526) registers:
   0/1 as the manual says?
 - Room temperatures: which of FE7 (500), FEK (502) and the WPMsystem room
@@ -182,6 +182,11 @@ up to date at the end of every milestone.
     without any feature is never published to Discovery.
   - m3: documented (fr/en): in emergency, manual or an unknown mode the
     select keeps its last value; "Operating mode (read)" shows the real one.
+  - Approval round 1: the WPMsystem compressor/booster registers give 1
+    when one says 1, 0 when all say 0, otherwise the operating status bit
+    (6 compressor, 3 booster): with fewer than six heat pumps (2542–2546
+    unavailable) the value never stays stuck at 1. Dates of the reference
+    commits corrected: dc160a5 is in v0.9.2, d5386c1 after it.
   - m4: after a write that may have left, a new command is refused "still
     running" for 3 s (`commandSpacing`): never two settings back to back.
 - **gladys_version >= 5.1.0** (as the sibling local modules); **categories

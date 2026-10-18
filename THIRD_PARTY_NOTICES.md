@@ -39,7 +39,7 @@ Ported in `src/isg.js` and `src/constants.js`: the Modbus TCP access to the
 ISG (port 502, unit 1); the controller identification (input register 5001)
 and the model ids (103, 104 for LWZ/LWA; 390 WPM 3, 391 WPM 3i, 449
 WPMsystem; 551 LWZ R290, which serves the WPM registers: commits dc160a5
-and d5386c1, after the v0.9.2 tag); the read-start retry
+(in v0.9.2) and d5386c1 (after v0.9.2)); the read-start retry
 (`_read_retry.py`, issue #722); the register addresses (zero-based, the manual minus one) of the
 temperatures, setpoints, operating mode, operating status, fault status and
 energy counters of the WPM and LWZ tables (`api/*.csv`, `wpm.py`, `wpm3.py`,
