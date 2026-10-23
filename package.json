@@ -1,6 +1,6 @@
 {
   "name": "gladys-stiebel-eltron",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "description": "Gladys Assistant external integration for STIEBEL ELTRON heat pumps through the ISG (Internet Service Gateway), over local Modbus TCP: temperatures, setpoints, operating mode, compressor and booster, energy, optional commands with a capped hot water setpoint. Unofficial, not affiliated with STIEBEL ELTRON.",
   "type": "module",
