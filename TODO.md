@@ -99,7 +99,7 @@ up to date at the end of every milestone.
   °C (kept out of the room temperature, as gladys-quatt); room temperatures
   `temperature-sensor/decimal`; humidity `humidity-sensor/decimal` %;
   heating setpoint `thermostat/target-temperature` °C (5–30 WPM, 10–30
-  LWZ); hot water setpoint `water-heater/target-temperature` °C (10–60,
+  LWZ); hot water setpoint `water-heater/target-temperature` °C (10–60 WPM, 10–65 LWZ,
   integers as the core's water-heater convention; category since Gladys
   4.85); mode `text/select` with fixed options and a read-only
   `text/text` that also shows emergency, manual and unknown codes;
@@ -123,9 +123,10 @@ up to date at the end of every milestone.
   finite number or a plain decimal text (`''`, `null`, `'1e2'`, `true` are
   refused), a tenth of a degree for heating, whole degrees for hot water,
   within the manual's range.
-- **Hot water ceiling**: `dhw_max_temperature`, 55 °C by default, 40–60 °C
-  (a typed value outside is clamped, never above 60; rounded down;
-  anything not a number gives 55). Refused on arrival above it, and the
+- **Hot water ceiling**: `dhw_max_temperature`, 65 °C by default, 40–65 °C
+  (a typed value outside is clamped, never above 65; rounded down;
+  anything not a number gives 65; the WPM stays at 60 °C, its manual).
+  Refused on arrival above it, and the
   ceiling (with the option) checked again right before the bytes leave: a
   ceiling lowered during a command stops it. The eco setpoint, the
   anti-legionella program and the LWZ manual setpoint are never written.

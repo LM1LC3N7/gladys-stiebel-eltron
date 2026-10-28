@@ -73,8 +73,9 @@ scripts/cover.mjs         cover.png generator
   only, refused when a value is missing; never sent after 3.5 s; a write
   without its echo is "sent, without confirmation"; never retried; one at a
   time; the ack never waits for Gladys. Never the emergency or manual mode.
-- **Hot water**: never above the configured ceiling (55 °C by default) nor
-  60 °C, whole degrees only.
+- **Hot water**: never above the configured ceiling (65 °C by default) nor
+  65 °C, nor the range of the controller (WPM 60 °C, LWZ 65 °C), whole
+  degrees only.
 - **Energy**: never an `energy-sensor` index nor `publishEnergyConsumption`
   until a real ISG shows the totals are cumulative and reliable.
 - Units only from the core's `DEVICE_FEATURE_UNITS_BY_CATEGORY`.

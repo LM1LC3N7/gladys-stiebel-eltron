@@ -56,14 +56,15 @@ export const POLL_INTERVAL = {
 
 /**
  * The hot water setpoint the commands may set, in °C (scalding risk). The
- * configuration chooses the ceiling between `min` and `max`, 55 °C by
- * default; nothing above 60 °C is ever sent, whatever the configuration or
- * the controller would accept (65 °C on some LWZ).
+ * configuration chooses the ceiling between `min` and `max`, 65 °C by
+ * default; nothing above 65 °C is ever sent, whatever the configuration or
+ * the controller would accept. The range of the controller still applies
+ * when lower: 60 °C on a WPM (its manual), 65 °C on an LWZ (`COMMANDS`).
  */
 export const DHW_CAP = {
   min: 40,
-  max: 60,
-  default: 55,
+  max: 65,
+  default: 65,
 };
 
 export const LIMITS = {

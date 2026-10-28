@@ -301,11 +301,13 @@ test('the setpoints: tenths for heating, whole degrees for hot water, written as
   ]);
 });
 
-test('hot water is capped at 55 °C by default; the bounds and the steps are strict', async (t) => {
+test('hot water on a WPM: 60 °C at most (its manual) under the default ceiling of 65 °C; strict bounds and steps', async (t) => {
   const isg = fakeIsg();
-  const { command } = await setup(t, { isg, config: ALLOWED });
-  assert.match((await command('dhw-setpoint', 56)).error, /plafonnée à 55 °C/);
+  const { command, gladys } = await setup(t, { isg, config: ALLOWED });
   assert.match((await command('dhw-setpoint', 61)).error, /entre 10 et 60 °C/);
+  assert.match((await command('dhw-setpoint', 65)).error, /entre 10 et 60 °C/);
+  const wpm = discovered(gladys).features.find((f) => f.external_id === feature('dhw-setpoint'));
+  assert.equal(wpm.max, 60, 'the WPM slider stops at 60 °C');
   assert.match((await command('dhw-setpoint', 52.5)).error, /multiple de 1 °C/);
   assert.match((await command('dhw-setpoint', 9)).error, /entre 10 et 60 °C/);
   for (const bad of ['', ' ', null, 'abc', '55°', true, '1e2', 'NaN', {}]) {
@@ -319,12 +321,29 @@ test('hot water is capped at 55 °C by default; the bounds and the steps are str
   assert.deepEqual(isg.writes(), []);
 });
 
-test('a ceiling raised in the configuration allows up to it, never above 60 °C', async (t) => {
+test('a ceiling typed above 65 °C is 65 °C; the WPM still stops at 60 °C', async (t) => {
   const isg = fakeIsg();
   const { command } = await setup(t, { isg, config: { ...ALLOWED, dhw_max_temperature: 70 } });
   assert.equal((await command('dhw-setpoint', 60)).success, true);
   assert.match((await command('dhw-setpoint', 61)).error, /entre 10 et 60 °C/);
   assert.deepEqual(isg.writes(), [[1509, 600]]);
+});
+
+test('an LWZ: hot water up to 65 °C by default, 65.5 and 66 refused, a lower ceiling wins', async (t) => {
+  const isg = fakeIsg({ registers: lwzRegisters() });
+  const { command, gladys, app } = await setup(t, { isg, config: ALLOWED });
+  const d = discovered(gladys, 'lwz');
+  const slider = d.features.find((f) => f.external_id === feature('dhw-setpoint', 'lwz'));
+  assert.deepEqual([slider.min, slider.max], [10, 65]);
+  assert.match((await command('dhw-setpoint', 66, { family: 'lwz' })).error, /entre 10 et 65 °C/);
+  assert.match((await command('dhw-setpoint', 65.5, { family: 'lwz' })).error, /multiple de 1 °C/);
+  assert.deepEqual(isg.writes(), []);
+  assert.equal((await command('dhw-setpoint', 65, { family: 'lwz' })).success, true);
+  assert.deepEqual(isg.writes(), [[1011, 650]]);
+  await app.configUpdated({ ...ALLOWED, dhw_max_temperature: 55 });
+  await settle();
+  assert.match((await command('dhw-setpoint', 60, { family: 'lwz' })).error, /plafonnée à 55 °C/);
+  assert.deepEqual(isg.writes(), [[1011, 650]]);
 });
 
 test('the option and the ceiling are checked again right before the write', async (t) => {

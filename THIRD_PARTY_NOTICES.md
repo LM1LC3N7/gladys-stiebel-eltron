@@ -59,5 +59,5 @@ unknown; the energy counters are shown as plain values, the day and the
 total apart (pystiebeleltron's running "day and total" maximum is not
 used); the WPM operating modes are numbered from the manual; the emergency
 and LWZ manual modes are never selected nor left; the hot water setpoint is
-capped (55 °C by default, 60 °C at most) and each command re-reads the
+capped (65 °C by default, 65 °C at most, 60 °C on a WPM) and each command re-reads the
 parameters right before writing.

@@ -89,12 +89,14 @@ commande est refusée. Activée, Gladys peut changer :
 - la **consigne d'eau chaude (confort)** : en degrés entiers, de 10 °C
   jusqu'au **plafond**.
 
-### Plafond de l'eau chaude : 55 °C par défaut
+### Plafond de l'eau chaude : 65 °C par défaut
 
 Une eau à 60 °C brûle en quelques secondes. Gladys ne règle donc **jamais
-l'eau chaude au-dessus de 55 °C** par défaut. Le réglage **Plafond de l'eau
-chaude** le change de 40 à 60 °C ; il n'est **jamais possible de dépasser
-60 °C**, quoi qu'on saisisse (même si certaines LWZ acceptent 65 °C). Une
+l'eau chaude au-dessus de 65 °C** par défaut. Le réglage **Plafond de l'eau
+chaude** l'abaisse, de 40 à 65 °C ; il n'est **jamais possible de dépasser
+65 °C**, quoi qu'on saisisse. La plage du régulateur s'applique toujours
+quand elle est plus basse : **60 °C au plus sur un WPM** (son manuel), 65 °C
+sur une LWZ. Une
 consigne au-dessus du plafond est refusée sans être envoyée, et le plafond
 est revérifié juste avant l'envoi (un plafond abaissé pendant une commande
 l'arrête). La consigne éco et le programme anti-légionelles du régulateur

@@ -4,7 +4,7 @@
 **STIEBEL ELTRON** heat pumps through the **ISG** (Internet Service
 Gateway) and its local **Modbus TCP** interface: temperatures, setpoints,
 operating mode, compressor and booster, energy, and three commands (mode,
-heating setpoint, hot water setpoint capped at 55 °C by default) behind an
+heating setpoint, hot water setpoint capped at 65 °C by default) behind an
 off-by-default option. **Never tested with a real ISG. Not affiliated with
 STIEBEL ELTRON.** Modbus has no authentication: keep the ISG on a trusted
 network.
@@ -49,8 +49,8 @@ Gladys ⇄ SDK ⇄ src/handlers.js ⇄ src/app.js (StiebelApp)
   3.5 s of the click or is refused unsent, and is answered by 4.3 s; a
   write without its echo is "sent, without confirmation", followed by reads
   5 s and 20 s later. Emergency and LWZ manual modes are never selected nor
-  left. Hot water: whole degrees, ceiling 55 °C by default, configurable
-  40–60 °C, never above 60 °C.
+  left. Hot water: whole degrees, ceiling 65 °C by default, configurable
+  40–65 °C, never above 65 °C (60 °C on a WPM, its manual).
 - **Guards**: after a write, until a read shows it (or 90 s), the same
   setting is sent again even when the read shows the wanted value; a read
   equal to the start value lifts nothing.

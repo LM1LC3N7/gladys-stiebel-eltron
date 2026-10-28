@@ -87,12 +87,13 @@ Gladys may change:
 - the **hot water setpoint (comfort)**: whole degrees, from 10 °C up to
   the **ceiling**.
 
-### Hot water ceiling: 55 °C by default
+### Hot water ceiling: 65 °C by default
 
 Water at 60 °C scalds in a few seconds. Gladys therefore **never sets the
-hot water above 55 °C** by default. The **Hot water ceiling** setting
-changes it from 40 to 60 °C; going **above 60 °C is never possible**,
-whatever is typed (even though some LWZ accept 65 °C). A setpoint above the
+hot water above 65 °C** by default. The **Hot water ceiling** setting
+lowers it, from 40 to 65 °C; going **above 65 °C is never possible**,
+whatever is typed. The range of the controller still applies when lower:
+**60 °C at most on a WPM** (its manual), 65 °C on an LWZ. A setpoint above the
 ceiling is refused unsent, and the ceiling is checked again right before
 sending (a ceiling lowered during a command stops it). The eco setpoint and
 the anti-legionella program of the controller are never changed.
